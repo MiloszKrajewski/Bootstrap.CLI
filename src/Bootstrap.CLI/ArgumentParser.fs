@@ -64,8 +64,8 @@ module ArgumentParser =
             match args with
             | [] -> ()
             | OptionToken p :: tail -> continueParse (handleOption p) tail
-            | SwitchToken n :: StringToken v :: tail when isOption n -> continueParse (handleOption (n, v)) tail
             | SwitchToken n :: tail when isSwitch n -> continueParse (handleSwitch n) tail
+            | SwitchToken n :: StringToken v :: tail when isOption n -> continueParse (handleOption (n, v)) tail
             | StringToken v :: tail when hasDefaultHandler -> continueParse (handleString v) tail
             | SwitchToken n :: _ when isOption n -> MissingOptionValue n
             | SwitchToken n :: _ -> UnrecognizedSwitch n

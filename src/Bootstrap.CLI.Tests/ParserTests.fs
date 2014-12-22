@@ -41,3 +41,23 @@ type OptionParserConfiguratorTests() =
         |> CommandParser.parseCommands [ "update"; "--file"; "some_filename" ]
 
         Assert.AreEqual("File 'some_filename' has been updated", result.Value)
+
+    [<Test>]
+    member x.ReadmeArgumentParser() =
+        let framesPerSecond = ref None
+        let autoCrop = ref false
+        let files = ref []
+
+        ArgumentParser.createArgumentParser ()
+        |> ArgumentParser.onOption "fps" "frames per second" (fun s -> 
+            framesPerSecond.Value <- s |> int |> Some)
+        |> ArgumentParser.onSwitch "auto-crop" "turn on auto crop feature" (fun () ->
+            autoCrop.Value <- true)
+        |> ArgumentParser.onString (fun s ->
+            files.Value <- s :: files.Value)
+        |> ArgumentParser.parseArguments [ "--fps"; "25"; "--auto-crop"; "video1.avi"; "video2.avi" ]
+
+        Assert.IsTrue (framesPerSecond.Value = Some 25)
+        Assert.IsTrue (autoCrop.Value)
+        Assert.IsTrue (files.Value = ["video2.avi"; "video1.avi"])
+
