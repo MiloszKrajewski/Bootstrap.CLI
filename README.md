@@ -81,7 +81,7 @@ So, previous example can be implemented with:
     createCommandParser ()
 	|> onDefaultCommand (fun args ->
 		createArgumentParser ()
-		|> onSwitch "version" "prints application version" (fun args ->
+		|> onSwitch "version" "prints application version" (fun () ->
 			printfn "mediatool, version 12.3.4.3555")
 		|> parseArguments args)
 	|> onCommand "encode" "encodes multiple video files" (fun args ->
