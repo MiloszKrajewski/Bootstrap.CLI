@@ -49,6 +49,7 @@
     <Compile Include="Tokenizer.fs" />
     <Compile Include="ArgumentParser.fs" />
     <Compile Include="CommandParser.fs" />
+    <Compile Include="ConfigParser.fs" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>

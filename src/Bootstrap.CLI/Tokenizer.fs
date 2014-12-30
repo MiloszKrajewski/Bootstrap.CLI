@@ -10,7 +10,11 @@ module internal Tokenizer =
     module internal Regex =
         open System.Text.RegularExpressions
 
-        let inline create rx = Regex(rx, RegexOptions.ExplicitCapture)
+        let private rxOptions = 
+            RegexOptions.ExplicitCapture |||
+            RegexOptions.IgnorePatternWhitespace
+
+        let inline create rx = Regex(rx, rxOptions)
 
         let inline tryMatch tx (rx: Regex) = 
             let m = rx.Match(tx)
@@ -38,3 +42,30 @@ module internal Tokenizer =
         | Some n, Some v -> OptionToken (n, v)
         | Some n, None -> SwitchToken n
         | _ -> StringToken arg
+
+    let private sectionLineRx = Regex.create @"^\s*\[(?<section>\w[^\]]*)\]\s*$"
+
+    let (|SectionLine|_|) line =
+        sectionLineRx |> Regex.tryMatch line |> Regex.tryGroup "section"
+
+    let private keyValueLineRx = Regex.create @"^\s*(?<key>\w[^=]*?)\s*\=\s*(?<value>.*?)\s*$"
+
+    let (|KeyValueLine|_|) line =
+        let m = keyValueLineRx |> Regex.tryMatch line
+        match m |> Regex.tryGroup "key", m |> Regex.tryGroup "value" with
+        | Some k, Some v -> Some (k, v)
+        | _ -> None
+
+    let private commentLineRx = Regex.create @"^\s*(\#|;)\s*(?<comment>.*?)\s*$"
+
+    let (|CommentLine|_|) line =
+        commentLineRx |> Regex.tryMatch line |> Regex.tryGroup "comment"
+
+    let private emptyLineRx = Regex.create @"^(?<line>\s*)$"
+
+    let (|EmptyLine|_|) line =
+        emptyLineRx |> Regex.tryMatch line |> Regex.tryGroup "line"
+
+
+
+
