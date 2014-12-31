@@ -1,8 +1,10 @@
 ﻿namespace Bootstrap.CLI
 
+open System.IO
+open System.Collections.Generic
+
 module ConfigParser =
     open Tokenizer
-    open System.IO
 
     let rec private enumerateLines (reader: TextReader) =
         seq {
@@ -11,6 +13,10 @@ module ConfigParser =
                 yield l
                 yield! enumerateLines reader
         }
+
+    let private raiseKeyNotFound key =
+        let msg = sprintf "Key '%A' could not be found" key
+        raise (new KeyNotFoundException(msg))
 
     let readConfigLines lines =
         let parse ((section, result) as state) line =
@@ -34,5 +40,12 @@ module ConfigParser =
     let tryGetValue sectionName valueName map =
         map |> Map.tryFind (sectionName, valueName)
 
-    let getValue sectionName valueName defaultValue map =
-        defaultArg (map |> tryGetValue sectionName valueName) defaultValue
+    let getValue sectionName valueName map =
+        match map |> tryGetValue sectionName valueName with
+        | Some v -> v
+        | _ -> raiseKeyNotFound (sectionName, valueName)
+
+    let getValueOrDefault sectionName valueName defaultValue map =
+        match map |> tryGetValue sectionName valueName with
+        | Some v -> v
+        | _ -> defaultValue
