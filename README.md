@@ -49,12 +49,9 @@ So, previous example can be implemented with:
 
     let options = 
         ArgP.create ()
-        |> ArgP.onOption "fps" "frames per second" (fun c s -> 
-	    { c with fps = s |> int |> Some })
-        |> ArgP.onSwitch "auto-crop" "turn on auto crop feature" (fun c -> 
-            { c with autocrop = true })
-        |> ArgP.onString (fun c s -> 
-            { c with files = s :: c.files })
+        |> ArgP.onOption "fps" "frames per second" (fun c s -> { c with fps = s |> int |> Some })
+        |> ArgP.onSwitch "auto-crop" "turn on auto crop feature" (fun c -> { c with autocrop = true })
+        |> ArgP.onString (fun c s -> { c with files = s :: c.files })
         |> ArgP.parse 
             { fps = None; autocrop = false; files = [] }
             [ "--fps"; "25"; "--auto-crop"; "video1.avi"; "video2.avi" ]
@@ -83,15 +80,15 @@ So, assuming the example argument parser above is called 'executeEncodeCommand' 
     module ArgP = Bootstrap.CLI.ArgumentParser
 
     CmdP.create ()
-	|> CmdP.onDefaultCommand (fun c args -> ...)
-        |> CmdP.onCommand "encode" "encodes multiple video files" (fun ctx args -> 
-            // now the "args" is an input for ArgumentParser
-            ArgP.create ()
-            |> ArgP.onOption "fps" "frames per second" (fun c s -> { c with fps = s |> int |> Some })
-            |> ArgP.onSwitch "auto-crop" "turn on auto crop feature" (fun c -> { c with autocrop = true })
-            |> ArgP.onString (fun c s -> { c with files = s :: c.files })
-            |> ArgP.parse { fps = None; autocrop = false; files = [] } args
-            |> doSomethingWithParsedOptions
+    |> CmdP.onDefaultCommand (fun c args -> ...)
+    |> CmdP.onCommand "encode" "encodes multiple video files" (fun ctx args -> 
+        // now the "args" is an input for ArgumentParser
+        ArgP.create ()
+        |> ArgP.onOption "fps" "frames per second" (fun c s -> { c with fps = s |> int |> Some })
+        |> ArgP.onSwitch "auto-crop" "turn on auto crop feature" (fun c -> { c with autocrop = true })
+        |> ArgP.onString (fun c s -> { c with files = s :: c.files })
+        |> ArgP.parse { fps = None; autocrop = false; files = [] } args
+        |> doSomethingWithParsedOptions
         ctx
     )
     |> CmdP.onCommand "offset" "offsets video or audio stream" (fun c args -> ...)
