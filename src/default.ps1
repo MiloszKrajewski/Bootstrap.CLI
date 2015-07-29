@@ -1,8 +1,8 @@
 Properties {
 	$release = "1.0.0.0"
 	$src = (get-item "./").fullname
-	$sln = "$src\Bootstrap.CLI.sln"
-	$snk = "$src\Bootstrap.CLI.snk"
+	$sln = "$src\Bootstrap.sln"
+	$snk = "$src\Bootstrap.snk"
 	$nunit = "$src\packages\NUnit.Runners.2.6.4\tools\nunit-console.exe"
 }
 
@@ -17,7 +17,7 @@ Task Rebuild -depends VsVars,Clean,KeyGen,Version {
 }
 
 Task Test -depends Rebuild {
-	exec { cmd /c $nunit "$src\Bootstrap.CLI.Tests\bin\Release\Bootstrap.CLI.Tests.dll" }
+	exec { cmd /c $nunit "$src\Bootstrap.Tests\bin\Release\Bootstrap.Tests.dll" }
 }
 
 Task KeyGen -depends VsVars -precondition { return !(test-path $snk) } {
@@ -25,7 +25,7 @@ Task KeyGen -depends VsVars -precondition { return !(test-path $snk) } {
 }
 
 Task Version {
-	Update-AssemblyVersion $src $release 'Bootstrap.CLI.Tests'
+	Update-AssemblyVersion $src $release 'Bootstrap.Tests'
 }
 
 Task Clean {

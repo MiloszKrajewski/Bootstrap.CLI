@@ -1,23 +1,26 @@
 function Clean-BinObj([string] $src) {
-	$folders = get-childitem -recurse -force $src -include bin,obj
-	$folders | % {
-		try {
-			remove-item $_.fullname -recurse -force
-		}
-		catch {
-			write-host -fore yellow $_
-		}
-	}
-	$folders = get-childitem -recurse -force $src -include bin,obj
-	$files = $folders | % { get-childitem $_.fullname * -recurse -file }
-	$files | % { 
-		try {
-			remove-item $_.fullname 
-		}
-		catch {
-			write-host -fore yellow $_
-		}
-	}
+    write-host $src
+	$folders = get-childitem $src -recurse -force -include bin,obj
+    if ($null -ne $folders) {
+        $folders | % {
+            try {
+                remove-item $_.fullname -recurse -force
+            }
+            catch {
+                write-host -fore yellow $_
+            }
+        }
+        $folders = get-childitem -recurse -force $src -include bin,obj
+        $files = $folders | % { get-childitem $_.fullname * -recurse }
+        $files | % { 
+            try {
+                remove-item $_.fullname 
+            }
+            catch {
+                write-host -fore yellow $_
+            }
+        }
+    }
 }
 
 function Create-Folder([string] $path) {

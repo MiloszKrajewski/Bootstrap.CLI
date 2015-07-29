@@ -1,4 +1,4 @@
-﻿namespace Bootstrap.CLI
+﻿namespace Bootstrap.CommandLine
 
 open System
    
@@ -8,13 +8,19 @@ module CommandParser =
     let MissingDefaultHandler () =
         ArgumentException ("The default handler is missing") |> raise
 
-    type Command = { Name: string; HelpText: string option; Handler: string seq -> unit }
-    type Config = { DefaultHandler: (string seq -> unit) option; Commands: Command list }
+    type Command<'ctx> = { 
+        Name: string; 
+        HelpText: string option; 
+        Handler: 'ctx -> string seq -> 'ctx }
+
+    type Config<'ctx> = { 
+        DefaultHandler: ('ctx -> string seq -> 'ctx) option; 
+        Commands: Command<'ctx> list }
 
     let internal createCommand name helpText handler =
         { Name = name; HelpText = optionString helpText; Handler = handler }
 
-    let createCommandParser () =
+    let create () =
         { DefaultHandler = None; Commands = [] }
 
     let onDefaultCommand handler configuration =
@@ -24,18 +30,18 @@ module CommandParser =
         let head = createCommand name helpText handler
         { configuration with Commands = head :: configuration.Commands }
 
-    let parseCommands args configuration =
+    let parse ctx args configuration =
         let commandMap = configuration.Commands |> Seq.map (fun c -> (c.Name, c.Handler)) |> Map.ofSeq
         let defaultHandler = configuration.DefaultHandler
         let isCommand name = commandMap |> Map.containsKey name
-        let handleAny handler tail =
+        let handleAny ctx handler tail =
             match handler with
-            | Some f -> f tail
-            | _ -> MissingDefaultHandler ()
-        let handleCommand name tail = handleAny (commandMap |> Map.tryFind name) tail
-        let handleDefault tail = handleAny defaultHandler tail
-        let parse args =
+                | Some f -> f ctx tail
+                | _ -> MissingDefaultHandler ()
+        let handleCommand ctx name tail = handleAny ctx (commandMap |> Map.tryFind name) tail
+        let handleDefault ctx tail = handleAny ctx defaultHandler tail
+        let parse ctx args =
             match args with
-            | StringToken n :: tail when isCommand n -> handleCommand n tail
-            | _ -> handleDefault args
-        args |> List.ofSeq |> parse
+                | StringToken n :: tail when isCommand n -> handleCommand ctx n tail
+                | _ -> handleDefault ctx args
+        args |> List.ofSeq |> parse ctx

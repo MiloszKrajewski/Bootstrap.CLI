@@ -1,13 +1,24 @@
-﻿namespace Bootstrap.CLI
+﻿namespace Bootstrap.CommandLine
 
 open System
 
 module ArgumentParser = 
     open Tokenizer
 
-    type Switch = { Names: string array; HelpText: string option; Handler: unit -> unit }
-    type Option = { Names: string array; HelpText: string option; Handler: string -> unit }
-    type Config = { DefaultHandler: (string -> unit) option; Switches: Switch list; Options: Option list }
+    type Switch<'ctx> = { 
+        Names: string array; 
+        HelpText: string option; 
+        Handler: 'ctx -> 'ctx }
+
+    type Option<'ctx> = { 
+        Names: string array; 
+        HelpText: string option; 
+        Handler: 'ctx -> string -> 'ctx }
+
+    type Config<'ctx> = { 
+        DefaultHandler: ('ctx -> string -> 'ctx) option; 
+        Switches: Switch<'ctx> list; 
+        Options: Option<'ctx> list }
 
     let private UnhandledArgument arg = 
         ArgumentException (sprintf "Unhandled argument '%s'" arg) |> raise
@@ -24,7 +35,7 @@ module ArgumentParser =
     let private createOption names helpText handler =
         { Option.Names = splitNames names; HelpText = optionString helpText; Handler = handler }
 
-    let createArgumentParser () =
+    let create () =
         { DefaultHandler = None; Switches = []; Options = [] }
 
     let onString handler configuration =
@@ -38,7 +49,7 @@ module ArgumentParser =
         let head = createOption names helpText handler
         { configuration with Options = head :: configuration.Options }
 
-    let parseArguments args configuration =
+    let parse ctx args configuration =
         let buildNameMap func list =
             list
             |> Seq.map func
@@ -53,23 +64,32 @@ module ArgumentParser =
         let isOption name = optionMap |> Map.containsKey name
         let hasDefaultHandler = defaultHandler.IsSome
 
-        let handleString arg =
-            match defaultHandler with | Some f -> f arg | _ -> UnhandledArgument arg
-        let handleOption (name, value) =
-            match optionMap |> Map.tryFind name with | Some f -> f value | _ -> UnrecognizedOption name
-        let handleSwitch name =
-            match switchMap |> Map.tryFind name with | Some f -> f () | _ -> UnrecognizedSwitch name
+        let handleString ctx arg =
+            match defaultHandler with 
+            | Some handler -> handler ctx arg 
+            | _ -> UnhandledArgument arg
+        let handleOption ctx (name, value) =
+            match optionMap |> Map.tryFind name with 
+            | Some handler -> handler ctx value 
+            | _ -> UnrecognizedOption name
+        let handleSwitch ctx name =
+            match switchMap |> Map.tryFind name with 
+            | Some handler -> handler ctx 
+            | _ -> UnrecognizedSwitch name
 
-        let rec parse args =
+        let rec loop ctx args =
             match args with
-            | [] -> ()
-            | OptionToken p :: tail -> continueParse (handleOption p) tail
-            | SwitchToken n :: tail when isSwitch n -> continueParse (handleSwitch n) tail
-            | SwitchToken n :: StringToken v :: tail when isOption n -> continueParse (handleOption (n, v)) tail
-            | StringToken v :: tail when hasDefaultHandler -> continueParse (handleString v) tail
+            | [] -> ctx
+            | OptionToken p :: tail -> 
+                loop (handleOption ctx p) tail
+            | SwitchToken n :: StringToken v :: tail when isOption n -> 
+                loop (handleOption ctx (n, v)) tail
+            | SwitchToken n :: tail when isSwitch n -> 
+                loop (handleSwitch ctx n) tail
+            | StringToken v :: tail when hasDefaultHandler -> 
+                loop (handleString ctx v) tail
             | SwitchToken n :: _ when isOption n -> MissingOptionValue n
             | SwitchToken n :: _ -> UnrecognizedSwitch n
             | StringToken v :: _ -> UnhandledArgument v
-        and continueParse _ tail = parse tail
 
-        args |> List.ofSeq |> parse
+        args |> List.ofSeq |> loop ctx
