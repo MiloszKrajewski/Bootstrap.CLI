@@ -32,32 +32,33 @@ We can identify three types of arguments:
 
 ArgumentParser configuration is about providing names of switches and options together with handler function which will be called when switch or option is specified. It's not parser's responsibility to store the parsed data, it just fires callbacks.
 
-* `createArgumentParser`: creates parser
+* `create`: creates parser
 * `onSwitch`: declares handler for a switch (on/off)
 * `onOption`: declares handler for an option (with value)
 * `onString`: declares handler for arguments (just a string, for example file name)
-* `parseArguments`: parsers arguments firing callbacks  
+* `parse`: parsers arguments firing callbacks  
 
 So, previous example can be implemented with:  
  
-	open Bootstrap.CLI.ArgumentParser 
+	module ArgP = Bootstrap.CLI.ArgumentParser
+    
+    type Options = {
+        fps: int option
+        autocrop: bool
+        files: string list }
 
-    let framesPerSecond = ref None
-    let autoCrop = ref false
-    let files = ref []
+    let options = 
+        ArgP.create ()
+        |> ArgP.onOption "fps" "frames per second" (fun c s -> { c with fps = s |> int |> Some })
+        |> ArgP.onSwitch "auto-crop" "turn on auto crop feature" (fun c -> { c with autocrop = true })
+        |> ArgP.onString (fun c s -> { c with files = s :: c.files })
+        |> ArgP.parse 
+            { fps = None; autocrop = false; files = [] }
+            [ "--fps"; "25"; "--auto-crop"; "video1.avi"; "video2.avi" ]
 
-    createArgumentParser ()
-    |> onOption "fps" "frames per second" (fun s -> 
-        framesPerSecond.Value <- s |> int |> Some)
-    |> onSwitch "auto-crop" "turn on auto crop feature" (fun () ->
-        autoCrop.Value <- true)
-    |> onString (fun s ->
-        files.Value <- s :: files.Value)
-    |> parseArguments [ "--fps"; "25"; "--auto-crop"; "video1.avi"; "video2.avi" ]
-
-    assert (framesPerSecond.Value = Some 25)
-    assert (autoCrop.Value)
-    assert (files.Value = ["video2.avi"; "video1.avi"])
+    assert (options.fps = Some 25)
+    assert (options.autocrop = true)
+    assert (options.files = ["video2.avi"; "video1.avi"])
 
 CommandParser
 ---
@@ -69,29 +70,25 @@ Some applications have many distinct commands (like `git`) and they use command 
 
 CommandParser configuration is about providing names of commands together with handler function which will be called when command is specified. And again, it's not parser's responsibility to store the parsed data, it just fires callbacks.
 
-* `createCommandParser`: creates parser
+* `create`: creates parser
 * `onDefaultCommand`: declares a handler used when no command is specified
 * `onCommand`: declares a handler for command
 
-So, previous example can be implemented with:
+So, assuming the example argument parser above is called 'executeEncodeCommand' we can implement 
 
-	open Bootstrap.CLI.ArgumentParser 
-	open Bootstrap.CLI.CommandParser 
+	module CmdP = Bootstrap.CLI.CommandParser 
+	module ArgP = Bootstrap.CLI.ArgumentParser
 
-    createCommandParser ()
-	|> onDefaultCommand (fun args ->
-		createArgumentParser ()
-		|> onSwitch "version" "prints application version" (fun () ->
-			printfn "mediatool, version 12.3.4.3555")
-		|> parseArguments args)
-	|> onCommand "encode" "encodes multiple video files" (fun args ->
-	    createArgumentParser ()
-	    |> onOption "fps" "frames per second" (fun s -> (/* ... */))
-	    |> onSwitch "auto-crop" "turn on auto crop feature" (fun () -> (/* ... */))
-	    |> onString (fun s -> (/* ... */))
-	    |> parseArguments args)
-	|> onCommand "offset" "offsets video or audio stream" (fun args ->
-	    createArgumentParser ()
-	    |> onOption "audio" "audio offset" (fun s -> (/* ... */))
-	    |> onString (fun s -> (/* ... */))
-	    |> parseArguments args)
+    CmdP.create ()
+	|> CmdP.onDefaultCommand (fun c args -> ...)
+	|> CmdP.onCommand "encode" "encodes multiple video files" (fun ctx args -> 
+        // now the "a" is an input for ArgumentParser
+        ArgP.create ()
+        |> ArgP.onOption "fps" "frames per second" (fun c s -> { c with fps = s |> int |> Some })
+        |> ArgP.onSwitch "auto-crop" "turn on auto crop feature" (fun c -> { c with autocrop = true })
+        |> ArgP.onString (fun c s -> { c with files = s :: c.files })
+        |> ArgP.parse { fps = None; autocrop = false; files = [] } args
+        c
+    )
+	|> CmdP.onCommand "offset" "offsets video or audio stream" (fun c args -> ...)
+    |> CmdP.parse () ["encode"; "video.avi"; "--fps"; "25"; "--auto-crop"]
